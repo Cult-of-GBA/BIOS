@@ -27,8 +27,13 @@ exception_reset:
     bx r0
     b $
 
-exception_undefined:
-    b $
+exception_irq:
+    stmfd sp!, {r0-r3, r12, lr}
+    mov r0, #0x04000000
+    add lr, pc, #0
+    ldr pc, [r0, #-4]
+    ldmfd sp!, {r0-r3, r12, lr}
+    subs pc, lr, #4
 
 exception_swi:
     stmfd sp!, {r11-r12, lr}
@@ -48,11 +53,11 @@ exception_swi:
     orr r11, #MODE_SYS
     msr cpsr_fc, r11
 
-    @ save system mode lr and r2 which may get destroyed by the SWI handler.
+    @ save r2 because the SWI handler may modify it.
+    @ save system mode lr because we overwrite it in the next instruction.
     stmfd sp!, {r2, lr}
 
     @ set return address and jump to the SWI handler.
-    @ NOTE: SWI handler may modify r0-r2, r12 and lr.
     adr lr, .done
     bx r12
 .done:
@@ -73,22 +78,18 @@ exception_swi:
     ldmfd sp!, {r11-r12, lr}
     movs pc, lr
 
+exception_undefined:
+    b $
+
 @ prefetch abort, data abort, reserved, fast IRQ
 exception_unused:
     b $
 
-exception_irq:
-    stmfd sp!, {r0-r3, r12, lr}
-    mov r0, #0x04000000
-    add lr, pc, #0
-    ldr pc, [r0, #-4]
-    ldmfd sp!, {r0-r3, r12, lr}
-    subs pc, lr, #4
-
+@ NOTE: SWI handler may modify r0-r2, r12 and lr.
 dummy_swi:
     bx lr
-    .word 0xDEADBEEF
 
+@ NOTE: this table can be massively shortened if we yolo out-of-bound SWIs.
 swi_table:
     .word dummy_swi
     .word dummy_swi
