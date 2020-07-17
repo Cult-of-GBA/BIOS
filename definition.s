@@ -7,6 +7,7 @@
 .equ MODE_ABT, 0x17
 .equ MODE_UND, 0x1B
 .equ MODE_SYS, 0x1F
+.equ IRQ_DISABLE, 0x80
 
 @ GBA related definitions
 .equ ROM_ENTRYPOINT, 0x08000000
