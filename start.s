@@ -17,11 +17,11 @@ exception_undefined:
     b $
 
 exception_swi:
-	b $
+    b $
 
 @ prefetch abort, data abort, reserved, fast IRQ
 exception_unused:
-	b $
+    b $
 
 exception_irq:
-	b $
+    b $
