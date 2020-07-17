@@ -22,9 +22,8 @@ exception_reset:
     ldr sp, =#SYS_STACK
 
     @ Jump into the ROM
-    mov r0, #ROM_ENTRYPOINT
     mov lr, pc
-    bx r0
+    mov pc, #ROM_ENTRYPOINT
     b $
 
 exception_irq:
@@ -58,9 +57,9 @@ exception_swi:
     stmfd sp!, {r2, lr}
 
     @ set return address and jump to the SWI handler.
-    adr lr, .done
+    adr lr, .swi_handler_done
     bx r12
-.done:
+.swi_handler_done:
     @ restore system saved registers
     ldmfd sp!, {r2, lr}
 
@@ -86,264 +85,317 @@ exception_unused:
     b $
 
 @ NOTE: SWI handler may modify r0-r2, r12 and lr.
-dummy_swi:
+swi_DoNothing:
+    bx lr
+
+@ TODO: which registers actually must be saved?
+@ TODO: handle word-count=0
+swi_CpuSet:
+    stmfd sp!, {r3, r4}
+
+    @ r3 = word count
+    lsl r3, r2, #11
+    lsrs r3, r3, #11
+    beq .swi_CpuSet_done
+
+    @ r2 = fn table index, bit0=fill, bit1=32-bit
+    @ TODO: mask out unused bits to make sure this doesn't break?
+    lsrs r2, r2, #25
+    orrcs r2, r2, #1
+    adr r4, .fn_table
+    ldr pc, [r4, r2, lsl #2]
+.fn_table:
+    .word .copy16
+    .word .fill16
+    .word .copy32
+    .word .fill32
+.copy16:
+    ldrh r4, [r0], #2
+    strh r4, [r1], #2
+    subs r3, r3, #1
+    bne .copy16
+    ldmfd sp!, {r3, r4}
+    bx lr
+.fill16:
+    ldrh r4, [r0]
+.fill16_loop:
+    strh r4, [r1], #2
+    subs r3, r3, #1
+    bne .fill16_loop
+    ldmfd sp!, {r3, r4}
+    bx lr
+.copy32:
+    ldmia r0!, {r4}
+    stmia r1!, {r4}
+    subs r3, r3, #1
+    bne .copy16
+    ldmfd sp!, {r3, r4}
+    bx lr
+.fill32:
+    ldr r4, [r0]
+.fill32_loop:
+    str r4, [r1], #4
+    subs r3, r3, #1
+    bne .fill32_loop
+.swi_CpuSet_done:
+    ldmfd sp!, {r3, r4}
     bx lr
 
 @ NOTE: this table can be massively shortened if we yolo out-of-bound SWIs.
 swi_table:
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
-    .word dummy_swi
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_CpuSet
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
