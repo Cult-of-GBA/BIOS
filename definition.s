@@ -1,0 +1,15 @@
+
+@ ARM7TDMI-S CPU definitions
+.equ MODE_USR, 0x10
+.equ MODE_FIQ, 0x11
+.equ MODE_IRQ, 0x12
+.equ MODE_SVC, 0x13
+.equ MODE_ABT, 0x17
+.equ MODE_UND, 0x1B
+.equ MODE_SYS, 0x1F
+
+@ GBA related definitions
+.equ ROM_ENTRYPOINT, 0x08000000
+.equ SVC_STACK, 0x03007FE0
+.equ IRQ_STACK, 0x03007FA0
+.equ SYS_STACK, 0x03007F00
