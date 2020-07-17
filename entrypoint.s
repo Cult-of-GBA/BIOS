@@ -48,7 +48,7 @@ exception_swi:
     mrs r11, spsr
     stmfd sp!, {r11}
 
-    @ enter system mode and disable IRQs
+    @ enter system mode but keep IRQ-disable bit from the caller mode.
     and r11, #IRQ_DISABLE
     orr r11, #MODE_SYS
     msr cpsr_fc, r11
