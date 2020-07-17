@@ -88,8 +88,6 @@ exception_unused:
 swi_DoNothing:
     bx lr
 
-@ TODO: which registers actually must be saved?
-@ TODO: handle word-count=0
 swi_CpuSet:
     stmfd sp!, {r3, r4}
 
