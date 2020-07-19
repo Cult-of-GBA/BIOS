@@ -126,7 +126,7 @@ swi_CpuSet:
     ldmia r0!, {r4}
     stmia r1!, {r4}
     subs r3, r3, #1
-    bne .copy16
+    bne .copy32
     ldmfd sp!, {r3, r4}
     bx lr
 .fill32:
