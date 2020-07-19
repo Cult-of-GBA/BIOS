@@ -139,6 +139,41 @@ swi_CpuSet:
     ldmfd sp!, {r3, r4}
     bx lr
 
+swi_CpuFastSet:
+    stmfd sp!, {r3 - r11}
+
+    @ r3 = word count
+    lsl r3, r2, #11
+    lsrs r3, #11
+    beq .swi_CpuFastSet_done
+
+    @ perform copy or fill operation depending on bit24 or r2.
+    tst r2, #(1 << 24)
+    bne .fill_fast32
+.copy_fast32:
+    ldmia r0!, {r4 - r11}
+    stmia r1!, {r4 - r11}
+    subs r3, #8
+    bne .copy_fast32
+    ldmfd sp!, {r3 - r11}
+    bx lr
+.fill_fast32:
+    ldr r4, [r0]
+    mov r5, r4
+    mov r6, r4
+    mov r7, r4
+    mov r8, r4
+    mov r9, r4
+    mov r10, r4
+    mov r11, r4
+.fill_fast32_loop:
+    stmia r1!, {r4 - r11}
+    subs r3, #8
+    bne .fill_fast32_loop
+.swi_CpuFastSet_done:
+    ldmfd sp!, {r3 - r11}
+    bx lr
+
 swi_LZ77UnCompReadNormalWrite8bit:
     stmfd sp!, {r3 - r6}
 
@@ -220,7 +255,7 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_CpuSet
-    .word swi_DoNothing
+    .word swi_CpuFastSet
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
