@@ -5,6 +5,8 @@ swi_DivArm:
     mov r0, r3
 
 swi_Div:
+	@ NOTE: differs from the official BIOS for division by 0 cases or int.MinValue / -1
+
     @ idea: basic division strategy: keep subtracting 2 ** n * Denom (r1) from Number (r0) until we can't anymore
     @		add these values up in r3 to find the div, add r0 will result in the mod
     @	    store power of 2 in r2
