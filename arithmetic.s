@@ -48,3 +48,52 @@ swi_Div:
 	.div_done:
 		ldmfd sp!, { r2, r4 } 
 		bx lr
+
+.thumb
+.align 2
+
+swi_Sqrt:
+	@ idea: binary search with a power of 2 as initial guess
+	
+	push { r1, r2, r3 }
+	
+	@ find power of 2 as initial guess
+	mov r1, #1
+	mov r2, r0					@ copy r0 because we need it later
+	.sqrt_initial_guess_loop:
+		lsl r1, #2
+		cmp r2, r1
+		blt .sqrt_binary_search_init
+		lsr r1, #1
+		lsr r2, #1
+		b .sqrt_initial_guess_loop
+	
+	.sqrt_binary_search_init:
+		@ we shifted r1 2 too far
+		lsr r1, #2
+		@ at this point: r1 ** 2 <= r0	
+		mov r2, r1
+	
+	.sqrt_binary_search_loop:
+		lsr r2, #1
+		bcs .sqrt_done
+		add r1, r2
+		
+		@ carry flag is not affected in next few instructions:
+		mov r3, r1
+		mul r3, r3
+		cmp r3, r0
+		
+		@ undo "add r1, r2" if gt
+		ble .sqrt_binary_search_loop
+		sub r1, r2
+		b .sqrt_binary_search_loop
+	
+	.sqrt_done:
+		mov r0, r1
+		
+		pop { r1, r2, r3 }
+		bx lr
+	
+.arm
+.align 4
