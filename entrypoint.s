@@ -241,6 +241,9 @@ swi_LZ77UnCompReadNormalWrite8bit:
     ldmfd sp!, {r3 - r6}
     bx lr
 
+.include "arithmetic.s"
+    
+
 @ NOTE: this table can be massively shortened if we yolo out-of-bound SWIs.
 swi_table:
     .word swi_DoNothing
@@ -249,8 +252,8 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_Div
+    .word swi_DivArm
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
