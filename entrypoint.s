@@ -254,7 +254,7 @@ swi_table:
     .word swi_DoNothing
     .word swi_Div
     .word swi_DivArm
-    .word swi_Sqrt + 1
+    .word swi_Sqrt
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_CpuSet
