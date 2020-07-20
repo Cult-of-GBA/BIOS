@@ -17,9 +17,9 @@ swi_Div:
     @ make operands positive
     movs r4, r1
     rsbmis r1, r1, #0        @ r1 was negative
-    beq .div_done            @ prevent freezes on division by 0
-    eors r4, r0              @ r0 was negative
-    rsbmi r0, r0, #0         @ bit 31 of r4 not contains sign(r1) ^ sign(r0)
+    beq .div_by_zero         @ prevent freezes on division by 0
+    eors r4, r0, asr #32     @ bit 31 of r4 are now sign(r1) ^ sign(r0)
+    rsbcs r0, r0, #0         @ r0 was negative
 
     @ find maximum power of 2 (in r2) such that (r1 * r2) < r0
     mov r2, #1
@@ -35,10 +35,11 @@ swi_Div:
         cmp r1, r0
         suble r0, r1
         addle r3, r2
-        lsr r1, #1
-        lsrs r2, #1
+        @ if eq then we have already found the divisor (perfect divisor)
+        lsrne r1, #1
+        lsrnes r2, #1
         
-        @ keep going until r2 was 1
+        @ keep going until r2 is 0
         bne .div_loop
         
     @ at this point, r0 contains Number % Denom (unsigned)
@@ -50,6 +51,10 @@ swi_Div:
     .div_done:
         ldmfd sp!, { r2, r4 } 
         bx lr
+    
+    .div_by_zero:
+        @ todo: add some specific result?
+        b .div_done
 
 
 swi_Sqrt:
@@ -61,10 +66,10 @@ swi_Sqrt:
     mov r1, #1
     mov r2, r0                    @ copy r0 because we need it later
     .sqrt_initial_guess_loop:
-        cmp r2, r1, lsl #2
-        lslge r1, #1
-        lsrge r2, #1
-        bge .sqrt_initial_guess_loop
+        cmp r1, r2, lsr #2
+        lslls r1, #1
+        lsrls r2, #1
+        bls .sqrt_initial_guess_loop
     @ at this point: r1 ** 2 <= r0    
     
     mov r2, r1, lsr #1
