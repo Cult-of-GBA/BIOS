@@ -242,6 +242,7 @@ swi_LZ77UnCompReadNormalWrite8bit:
     bx lr
 
 .include "arithmetic.s"
+.include "misc.s"
     
     
 @ the real BIOS yolo's out-of-bound SWIs, so we might as well do it too
@@ -255,11 +256,11 @@ swi_table:
     .word swi_Div
     .word swi_DivArm
     .word swi_Sqrt
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_ArcTan
+    .word swi_ArcTan2
     .word swi_CpuSet
     .word swi_CpuFastSet
-    .word swi_DoNothing
+    .word swi_GetBiosChecksum
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing

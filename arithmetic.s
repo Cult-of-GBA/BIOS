@@ -88,3 +88,106 @@ swi_Sqrt:
     
     ldmfd sp!, { r1, r2, r3 }
     bx lr
+    
+swi_ArcTan2:
+    @ should calculate the arctan with correction processing, that is (from wikipedia):
+    @                 / arctan(y / x)       if x > 0
+    @                |  arctan(y / x) + pi  if x < 0 and y >= 0
+    @ atan2(y, x) = <   arctan(y / x) - pi  if x < 0 and y < 0
+    @                |   pi / 2             if x == 0 and y > 0
+    @                |  -pi / 2             if x == 0 and y < 0
+    @                 \  undefined          if x == y == 0
+    @ the original BIOS returns r0 = 0 for x = y = 0 (undefined)
+    @ return value is in [0x0000, 0xffff] for (0, 2pi)
+    @ this means that pi = 0x8000 and pi / 2 = 0x4000 (this is correct looking at the official BIOS)
+    
+    @ NOTE: I'm not sure if r1 and r3 should be saved yet, r2 and lr definitely should!
+    stmfd sp!, { r1-r3, lr }
+    mov r2, #0
+    
+    cmp r2, r0, lsl #16           @ so that we can properly check the sign of r0 we shift it
+    blt .arctan2_div_arctan       @ 0 < x
+    bgt .arctan2_x_lt_0           @ 0 > x
+                                  @ 0 == x
+    
+    .arctan2_x_eq_0:
+        mov r0, #0x4000
+        cmp r2, r1, lsl #16       @ r2 still contains 0, compare with r1 with sign bit in bit 31
+        rsbgt r0, #0x10000        @ -pi/2 if 0 > y (note: that is the order of the comparison)
+        moveq r0, #0              @ 0 if 0 == y
+        
+        ldmfd sp!, { r1-r3, lr }  @ no arctan necessary anymore in these cases
+        bx lr
+        
+    .arctan2_x_lt_0:
+        @ store "extra offset" in r2
+        mov r2, #0x8000
+        tst r1, #0x8000 
+        rsbmi r2, #0x10000        @ -pi if y < 0
+
+    .arctan2_div_arctan:
+        @ r0 = r1 / r0
+        @ shift r1 (numerator) 16 bits so that the result will be 16 bit again (otherwise it will always be either 0 or 1)
+        mov r3, r0, lsl #16
+        mov r0, r1, lsl #16
+        mov r1, r3, asr #16
+        swi 0x060000
+        
+        @ mov r0, r2
+        @ ldmfd sp!, { r1-r3, lr }
+        @ bx lr
+        @ different return routine for arctan2
+        ldr lr, =.add_arctan2_offset
+
+swi_ArcTan:
+    @ this is the algorithm used by the original BIOS
+    @ in the end, we want ROM's to run as if the normal BIOS was in the emulator
+    @ this algorithm is insanely fast, but does have some inaccuracies for higher angles
+    @ return value is in (0xc000, 0x4000) for (-pi/2, pi/2)
+    mul r1,r0,r0
+    mov r1,r1, asr #0xe
+    rsb r1,r1,#0x0
+    
+    mov r3,#0xa9
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0x390
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0x900
+    add r3,r3,#0x1c
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0xf00
+    add r3,r3,#0xb6
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0x1600
+    add r3,r3,#0xaa
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0x2000
+    add r3,r3,#0x81
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0x3600
+    add r3,r3,#0x51
+    
+    mul r3,r1,r3
+    mov r3,r3, asr #0xe
+    add r3,r3,#0xa200
+    add r3,r3,#0xf9
+    
+    mul r0,r3,r0
+    mov r0,r0, asr #0x10
+    bx lr
+    
+    .add_arctan2_offset:
+        ldmfd sp!, { r1-r3, lr }
+        bx lr
+        
