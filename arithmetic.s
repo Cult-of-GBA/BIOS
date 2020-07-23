@@ -113,7 +113,7 @@ swi_ArcTan2:
     @         /   -x/y|-x/y   \
     @
     @ in every octant, the formula would be ArcTan2(x, y) = ArcTan(operand) + offset * pi
-    @     operand is y/x (if |x| < |y|) or -x/y (if |x| > |y|)
+    @     operand is y/x (if |x| > |y|, so the "normal") or -x/y (if |x| < |y|)
     @         we add the sign because we would otherwise need to subtract it from the offset
     @     the offset is a fraction times pi, so for oct3 or oct4 it would be 1 pi, and for oct5 it's 3/2pi
     @ These things are needed so that the resulting angle for the ArcTan call is always less than pi/4 in absolute value
@@ -152,18 +152,17 @@ swi_ArcTan2:
     @           x ^ y ^ (|x| - |y|) < 0 
     
     eor r5, r0, r1
-    subs r2, r3            @ flip operands and sign if |x| > |y| ("normal" case)
-    movgt r2, r1
-    movgt r1, r0
-    movgt r0, r2
-    rsblt r0, #0           @ we need -arctan(x/y) = arctan(-x/y) for the flipped case
+    subs r2, r3            @ flip operands if |x| > |y| ("normal" case)
+    movpl r3, r1
+    movpl r1, r0
+    movpl r0, r3
     
     eors r5, r2
     addmi r4, #2           @ add sign bit to r4 (odd or even)
     
     @ load arctan offset based on octant we're in
-    ldr r5, =#.octant_offset_LUT
-    ldrh r5, [r5, r4]
+    ldr r3, =#.octant_offset_LUT
+    ldrh r4, [r3, r4]
     
     @ x / y or y / x (based on octant)
     lsl r0, #14
@@ -178,52 +177,56 @@ swi_ArcTan:
     @ in the end, we want ROM's to run as if the normal BIOS was in the emulator
     @ this algorithm is insanely fast, but is highly inaccurate for higher angles
     @ return value is in (0xc000, 0x4000) for (-pi/2, pi/2)
-    mul r1,r0,r0
-    mov r1,r1, asr #0xe
-    rsb r1,r1,#0x0
+    mul r1, r0, r0
+    mov r1, r1, asr #0xe
+    rsb r1, r1, #0x0
     
-    mov r3,#0xa9
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0x390
+    mov r3, #0xa9
+    mul r3, r1,r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0x390
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0x900
-    add r3,r3,#0x1c
+    mul r3, r1, r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0x900
+    add r3, r3, #0x1c
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0xf00
-    add r3,r3,#0xb6
+    mul r3, r1, r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0xf00
+    add r3, r3, #0xb6
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0x1600
-    add r3,r3,#0xaa
+    mul r3, r1, r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0x1600
+    add r3, r3, #0xaa
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0x2000
-    add r3,r3,#0x81
+    mul r3, r1,r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0x2000
+    add r3, r3, #0x81
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0x3600
-    add r3,r3,#0x51
+    mul r3, r1, r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0x3600
+    add r3, r3, #0x51
     
-    mul r3,r1,r3
-    mov r3,r3, asr #0xe
-    add r3,r3,#0xa200
-    add r3,r3,#0xf9
+    mul r3, r1, r3
+    mov r3, r3, asr #0xe
+    add r3, r3, #0xa200
+    add r3, r3, #0xf9
     
     mul r0,r3,r0
     mov r0,r0, asr #0x10
     bx lr
     
 .add_arctan2_offset:
+    @ r2 still contains info on whether the operands were flipped
+    @ r2 < 0 means the result should also be negative
+    eor r0, r2, asr #32
+    adc r0, #0
     
-    add r0, r5, lsl #8
+    add r0, r4, lsl #8
     mov r3, #0x170     @ (this is always the resulting value in r3 in the original BIOS)
     
     ldmfd sp!, { r2, r4, r5, lr }
