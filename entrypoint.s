@@ -201,7 +201,7 @@ swi_CpuFastSet:
     ldmia r0!, {r4 - r11}
     stmia r1!, {r4 - r11}
     subs r3, #8
-    bne .copy_fast32
+    bgt .copy_fast32
     ldmfd sp!, {r3 - r11}
     bx lr
 .fill_fast32:
@@ -216,7 +216,7 @@ swi_CpuFastSet:
 .fill_fast32_loop:
     stmia r1!, {r4 - r11}
     subs r3, #8
-    bne .fill_fast32_loop
+    bgt .fill_fast32_loop
 .swi_CpuFastSet_done:
     ldmfd sp!, {r3 - r11}
     bx lr
