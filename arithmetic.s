@@ -24,10 +24,10 @@ swi_Div:
     @ find maximum power of 2 (in r2) such that (r1 * r2) < r0
     mov r2, #1
     .div_max_pow_of_2_loop:
-        cmp r1, r0, lsl #1
-        lslle r2, #1
-        lslle r1, #1
-        ble .div_max_pow_of_2_loop
+        cmp r1, r0, lsr #1
+        lslls r2, #1
+        lslls r1, #1
+        bls .div_max_pow_of_2_loop
         
     mov r3, #0
     
@@ -45,8 +45,10 @@ swi_Div:
     @ at this point, r0 contains Number % Denom (unsigned)
     @                r3 contains Number / Denom (unsigned)
     
-    eor r1, r0, r4, asr #32        @ Number % Denom (signed)
-    eor r0, r3, r4, asr #32        @ Number / Denom (signed)
+    eors r1, r0, r4, asr #32
+    adc r1, r1, #0              @ Number % Denom (signed)
+    eors r0, r3, r4, asr #32
+    adc r0, r0, #0              @ Number / Denom (signed)
 
     .div_done:
         ldmfd sp!, { r2, r4 } 
@@ -88,61 +90,93 @@ swi_Sqrt:
     
     ldmfd sp!, { r1, r2, r3 }
     bx lr
-    
+
+.octant_offset_LUT:
+    .hword 0x0000, 0x0040, 0x0040, 0x0080
+    .hword 0x0080, 0x00c0, 0x00c0, 0x0100
+
 swi_ArcTan2:
     @ should calculate the arctan with correction processing, that is (from wikipedia):
-    @                 / arctan(y / x)       if x > 0
-    @                |  arctan(y / x) + pi  if x < 0 and y >= 0
-    @ atan2(y, x) = <   arctan(y / x) - pi  if x < 0 and y < 0
-    @                |   pi / 2             if x == 0 and y > 0
-    @                |  -pi / 2             if x == 0 and y < 0
-    @                 \  undefined          if x == y == 0
-    @ the original BIOS returns r0 = 0 for x = y = 0 (undefined)
+    @ the ArcTan implementation of the original BIOS is pretty bad (very very inaccurate for higher angles)
+    @ so I had to come up with a different way of calculating this than a simple formula you would find on wikipedia
+    @ ArcTan basically _needs_ the input angles to be < pi/4 in absolute value, so I had to split a 2d grid into octants and
+    @ figure out the offset based on those octants, and flip x and y in certain ones. It looks as follows:
+    @
+    @         \   -x/y| -x/y  /
+    @           \ oct2|oct1 /
+    @       y/x   \1/2|1/2/  y/x
+    @       oct3 1  \ | /   oct0  0
+    @    ---------------------------
+    @       oct4 1  / | \   oct7  2
+    @       y/x   /3/2|3/2\  y/x
+    @           / oct5|oct6 \
+    @         /   -x/y|-x/y   \
+    @
+    @ in every octant, the formula would be ArcTan2(x, y) = ArcTan(operand) + offset * pi
+    @     operand is y/x (if |x| < |y|) or -x/y (if |x| > |y|)
+    @         we add the sign because we would otherwise need to subtract it from the offset
+    @     the offset is a fraction times pi, so for oct3 or oct4 it would be 1 pi, and for oct5 it's 3/2pi
+    @ These things are needed so that the resulting angle for the ArcTan call is always less than pi/4 in absolute value
+    @
     @ return value is in [0x0000, 0xffff] for (0, 2pi)
     @ this means that pi = 0x8000 and pi / 2 = 0x4000 (this is correct looking at the official BIOS)
     
-    @ NOTE: I'm not sure if r1 and r3 should be saved yet, r2 and lr definitely should!
-    stmfd sp!, { r1-r3, lr }
-    mov r2, #0
+    stmfd sp!, { r2, r4, r5, lr }
     
-    cmp r2, r0, lsl #16           @ so that we can properly check the sign of r0 we shift it
-    blt .arctan2_div_arctan       @ 0 < x
-    bgt .arctan2_x_lt_0           @ 0 > x
-                                  @ 0 == x
+    @ copy r0, r1 into r2, r3
+    stmfd sp!, { r0, r1 }
+    ldmfd sp!, { r2, r3 }
     
-    .arctan2_x_eq_0:
-        mov r0, #0x4000
-        cmp r2, r1, lsl #16       @ r2 still contains 0, compare with r1 with sign bit in bit 31
-        rsbgt r0, #0x10000        @ -pi/2 if 0 > y (note: that is the order of the comparison)
-        moveq r0, #0              @ 0 if 0 == y
-        
-        ldmfd sp!, { r1-r3, lr }  @ no arctan necessary anymore in these cases
-        bx lr
-        
-    .arctan2_x_lt_0:
-        @ store "extra offset" in r2
-        mov r2, #0x8000
-        tst r1, #0x8000 
-        rsbmi r2, #0x10000        @ -pi if y < 0
-
-    .arctan2_div_arctan:
-        @ r0 = r1 / r0
-        @ shift r1 (numerator) 16 bits so that the result will be 16 bit again (otherwise it will always be either 0 or 1)
-        mov r3, r0, lsl #16
-        mov r0, r1, lsl #16
-        mov r1, r3, asr #16
-        swi 0x060000
-        
-        @ mov r0, r2
-        @ ldmfd sp!, { r1-r3, lr }
-        @ bx lr
-        @ different return routine for arctan2
-        ldr lr, =.add_arctan2_offset
-
+    @ we calculate the offset into the offset LUT using r4
+    @ I cannot shift the offset register in a ldrh instruction, so I need to calculate it with offset immediately
+    mov r4, #0
+    
+    @ bottom 4 octants (y < 0)
+    cmp r1, #0
+    addlt r4, #8
+    rsblt r3, #0        @ r3 = |y|
+    
+    @ diagonal octants (+2) (x * y < 0)
+    teq r0, r1
+    addmi r4, #4
+    
+    cmp r0, #0
+    rsblt r2, #0        @ r2 = |x|
+    
+    @ to determine the offset for the odd octants (oct1/3/5/7), I came up with the following formula:
+    @       an octant is odd if and only if (x * y > 0 AND |x| < |y|)
+    @                                    OR (x * y < 0 AND |x| > |y|)
+    @       so it is odd if and only if
+    @           x * y * |x| < x * y * |y|
+    @       so it is odd if and only if
+    @           x ^ y ^ (|x| - |y|) < 0 
+    
+    eor r5, r0, r1
+    subs r2, r3            @ flip operands and sign if |x| > |y| ("normal" case)
+    movgt r2, r1
+    movgt r1, r0
+    movgt r0, r2
+    rsblt r0, #0           @ we need -arctan(x/y) = arctan(-x/y) for the flipped case
+    
+    eors r5, r2
+    addmi r4, #2           @ add sign bit to r4 (odd or even)
+    
+    @ load arctan offset based on octant we're in
+    ldr r5, =#.octant_offset_LUT
+    ldrh r5, [r5, r4]
+    
+    @ x / y or y / x (based on octant)
+    lsl r0, #14
+    bl swi_Div
+    
+    ldr lr, =#.add_arctan2_offset
+    
 swi_ArcTan:
+    @ TODO: can this one we turned into THUMB? should be about the same...
+
     @ this is the algorithm used by the original BIOS
     @ in the end, we want ROM's to run as if the normal BIOS was in the emulator
-    @ this algorithm is insanely fast, but does have some inaccuracies for higher angles
+    @ this algorithm is insanely fast, but is highly inaccurate for higher angles
     @ return value is in (0xc000, 0x4000) for (-pi/2, pi/2)
     mul r1,r0,r0
     mov r1,r1, asr #0xe
@@ -187,7 +221,11 @@ swi_ArcTan:
     mov r0,r0, asr #0x10
     bx lr
     
-    .add_arctan2_offset:
-        ldmfd sp!, { r1-r3, lr }
-        bx lr
+.add_arctan2_offset:
+    
+    add r0, r5, lsl #8
+    mov r3, #0x170     @ (this is always the resulting value in r3 in the original BIOS)
+    
+    ldmfd sp!, { r2, r4, r5, lr }
+    bx lr
         
