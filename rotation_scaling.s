@@ -160,13 +160,12 @@ swi_BGAffineSet:
         and r8, #0xff         @ mod 2pi
         lsl r8, #1
         
-        ldrsh r7, [r12, r8]   @ sin(phi)
-        ldrsh r8, [r12, r9]   @ cos(phi)
+        ldrsh r7, [r12, r7]   @ sin(phi)
+        ldrsh r8, [r12, r8]   @ cos(phi)
         
         @ calculate the actual rotate/scale parameters
         mul r4, r3, r7        @ B = sin(alpha) / xMag
         asr r4, #14
-        rsb r4, #0
         mul r3, r8            @ A = cos(alpha) / xMag
         asr r3, #14
         
@@ -197,6 +196,8 @@ swi_BGAffineSet:
         mla r10, r8, r6, r10  @ O_y - D_x * C - D_y * D
         
         strh r3, [r1], #2
+        @ original BIOS seems to want a - sign for PB again (same as for ObjAffineSet, I don't know why)
+        rsb r4, #0
         strh r4, [r1], #2
         strh r5, [r1], #2
         strh r6, [r1], #2
