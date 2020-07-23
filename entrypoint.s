@@ -83,6 +83,53 @@ exception_undefined:
 @ prefetch abort, data abort, reserved, fast IRQ
 exception_unused:
     b $
+    
+@ the real BIOS yolo's out-of-bound SWIs, so we might as well do it too
+swi_table:
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_Div
+    .word swi_DivArm
+    .word swi_Sqrt
+    .word swi_ArcTan
+    .word swi_ArcTan2
+    .word swi_CpuSet
+    .word swi_CpuFastSet
+    .word swi_GetBiosChecksum
+    .word swi_BGAffineSet
+    .word swi_ObjAffineSet
+    .word swi_DoNothing
+    .word swi_LZ77UnCompReadNormalWrite8bit
+    .word swi_LZ77UnCompReadNormalWrite8bit
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
 
 @ NOTE: SWI handler may modify r0-r2, r12 and lr.
 swi_DoNothing:
@@ -243,51 +290,4 @@ swi_LZ77UnCompReadNormalWrite8bit:
 
 .include "arithmetic.s"
 .include "misc.s"
-    
-    
-@ the real BIOS yolo's out-of-bound SWIs, so we might as well do it too
-swi_table:
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_Div
-    .word swi_DivArm
-    .word swi_Sqrt
-    .word swi_ArcTan
-    .word swi_ArcTan2
-    .word swi_CpuSet
-    .word swi_CpuFastSet
-    .word swi_GetBiosChecksum
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_LZ77UnCompReadNormalWrite8bit
-    .word swi_LZ77UnCompReadNormalWrite8bit
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+.include "rotation_scaling.s"
