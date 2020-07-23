@@ -96,7 +96,7 @@ swi_Sqrt:
     .hword 0x0080, 0x00c0, 0x00c0, 0x0100
 
 swi_ArcTan2:
-    @ should calculate the arctan with correction processing, that is (from wikipedia):
+    @ should calculate the arctan with correction processing
     @ the ArcTan implementation of the original BIOS is pretty bad (very very inaccurate for higher angles)
     @ so I had to come up with a different way of calculating this than a simple formula you would find on wikipedia
     @ ArcTan basically _needs_ the input angles to be < pi/4 in absolute value, so I had to split a 2d grid into octants and
@@ -137,11 +137,17 @@ swi_ArcTan2:
     rsblt r3, #0        @ r3 = |y|
     
     @ diagonal octants (+2) (x * y < 0)
-    teq r0, r1
-    addmi r4, #4
+    @ r1    r0      flags after tst r1, r0, asr #32:
+    @ < 0   < 0     N clear, C set
+    @ < 0   >= 0    N set, C clear
+    @ >= 0  < 0     N set, C set,
+    @ >= 0  >= 0    N clear, C clear
+    @ this saves one comparison
+    @ eors r5 because we need this information after anyway
     
-    cmp r0, #0
-    rsblt r2, #0        @ r2 = |x|
+    eors r5, r1, r0, asr #32    
+    addmi r4, #4
+    rsbcs r2, #0        @ r2 = |x|
     
     @ to determine the offset for the odd octants (oct1/3/5/7), I came up with the following formula:
     @       an octant is odd if and only if (x * y > 0 AND |x| < |y|)
@@ -151,7 +157,7 @@ swi_ArcTan2:
     @       so it is odd if and only if
     @           x ^ y ^ (|x| - |y|) < 0 
     
-    eor r5, r0, r1
+    @ eor r5, r0, r1, we do this before
     subs r2, r3            @ flip operands if |x| > |y| ("normal" case)
     movpl r3, r1
     movpl r1, r0
@@ -226,6 +232,7 @@ swi_ArcTan:
     eors r0, r2, asr #32
     adc r0, #0
     
+    @ add the offset we calculated
     add r0, r4, lsl #8
     mov r3, #0x170     @ (this is always the resulting value in r3 in the original BIOS)
     
