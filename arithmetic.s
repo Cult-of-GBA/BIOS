@@ -223,7 +223,7 @@ swi_ArcTan:
 .add_arctan2_offset:
     @ r2 still contains info on whether the operands were flipped
     @ r2 < 0 means the result should also be negative
-    eor r0, r2, asr #32
+    eors r0, r2, asr #32
     adc r0, #0
     
     add r0, r4, lsl #8
