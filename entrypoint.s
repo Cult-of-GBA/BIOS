@@ -27,7 +27,7 @@ swi_SoftReset:
     @ read return address from 0x03007FFA (0x04000000 - 6 with mirroring)
     mov r0, #0x04000000
     ldrb r2, [r0, #-6]
-    cmp r2, #0
+    tst r2, #1
     moveq lr, #ROM_ENTRYPOINT
     movne lr, #RAM_ENTRYPOINT
 
@@ -121,7 +121,7 @@ exception_unused:
 @ the real BIOS yolo's out-of-bound SWIs, so we might as well do it too
 swi_table:
     .word swi_SoftReset
-    .word swi_DoNothing
+    .word swi_RegisterRamReset
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
@@ -325,3 +325,4 @@ swi_LZ77UnCompReadNormalWrite8bit:
 .include "arithmetic.s"
 .include "misc.s"
 .include "rotation_scaling.s"
+.include "reset_functions.s"
