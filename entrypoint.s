@@ -13,18 +13,52 @@ b exception_irq
 b exception_unused
 
 exception_reset:
-    @ Setup supervisor, IRQ and system mode stacks.
-    msr cpsr_c, #MODE_SVC
+swi_HardReset:
+    @ disable IME
+    mov r0, #0x04000000
+    strb r0, [r0, #8]
+    
+    @ set r2 to 0 so that we enter ROM after SoftReset
+    @ todo: jump to the boot animation function, and keep "reset_modes" in lr, then mov r2, #0 right before bx lr at the end of it
+    mov lr, #ROM_ENTRYPOINT
+    b reset_modes
+    
+swi_SoftReset:
+    @ read return address from 0x03007FFA (0x04000000 - 6 with mirroring)
+    mov r0, #0x04000000
+    ldrb r2, [r0, #-6]
+    cmp r2, #0
+    moveq lr, #ROM_ENTRYPOINT
+    movne lr, #RAM_ENTRYPOINT
+
+reset_modes:
+    @ Setup supervisor, IRQ and system mode stacks/link registers/.
+    msr cpsr_cf, #MODE_SVC
     ldr sp, =#SVC_STACK
+    mov lr, #0
+    msr spsr_cf, lr 
     msr cpsr_c, #MODE_IRQ
     ldr sp, =#IRQ_STACK
-    msr cpsr_c, #MODE_SYS
+    mov lr, #0
+    msr spsr_cf, lr
+    msr cpsr_cf, #MODE_SYS
     ldr sp, =#SYS_STACK
-
-    @ Jump into the ROM
-    mov lr, pc
-    mov pc, #ROM_ENTRYPOINT
-    b $
+    
+    @ clear 0x200 bytes of RAM from 0x03007d00 to 0x03007fff
+    @ r0 still contains 0x04000000 from HardReset or SoftReset!
+    ldr r1, =#-0x200
+    mov r2, #0
+    
+    .soft_reset_RAM_clear:
+        str r2, [r0, r1]
+        adds r1, #4
+        bne .soft_reset_RAM_clear
+    
+    @ load all registers from 0 cleared RAM
+    ldmfa r0, { r0-r12 }
+    
+    @ Jump into the ROM or RAM
+    bx lr
 
 exception_irq:
     stmfd sp!, {r0-r3, r12, lr}
@@ -86,7 +120,7 @@ exception_unused:
     
 @ the real BIOS yolo's out-of-bound SWIs, so we might as well do it too
 swi_table:
-    .word swi_DoNothing
+    .word swi_SoftReset
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
@@ -125,7 +159,7 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_HardReset
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing

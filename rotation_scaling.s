@@ -146,14 +146,14 @@ swi_BGAffineSet:
         bmi .bg_affine_set_return
         
         ldmia r0!, { r9, r10, r11 }
-        @ Original data center x (O_x)
-        @ Original data center y (O_y)
-        @ [Display center y] [Display center x]
+        @ r9:  Original data center x (O_x)
+        @ r10: Original data center y (O_y)
+        @ r11: MSBs: [Display center y] LSBs: [Display center x]
         
         ldrsh r3, [r0], #2    @ x scaling (8 bit fractional)
         ldrsh r5, [r0], #2    @ y scaling (8 bit fractional)
         ldrh r6, [r0], #4     @ angle of rotation (8 bit fractional, ignored by original BIOS)
-        lsr r6, #8
+        lsr r6, #8            @       post index by 4 because we want to stay word aligned for the next loop
         
         lsl r7, r6, #1
         add r8, r6, #0x40     @ cos(phi) = sin(phi + pi/2), 0x80 because r8 was already shifted
