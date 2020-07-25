@@ -96,19 +96,18 @@ swi_ObjAffineSet:
         ldrsh r9, [r12, r9]   @ cos(phi)
         
         @ calculate the actual rotate/scale parameters
-        mul r5, r4, r8        @ B = sin(alpha) / xMag
-        rsb r5, r11, r5, asr #14  @ needs negative sign (done in original BIOS as well)
-        mul r4, r9            @ A = cos(alpha) / xMag
+        mul r5, r4, r8            @ B = sin(alpha) / xMag
+        sub r5, r11, r5, asr #14  @ needs negative sign (done in original BIOS as well)
+        mul r4, r9                @ A = cos(alpha) / xMag
         asr r4, #14
         
-        mul r7, r6, r9        @ D = cos(alpha) / yMag
+        mul r7, r6, r9            @ D = cos(alpha) / yMag
         asr r7, #14
-        mul r6, r8            @ C = sin(alpha) / yMag
+        mul r6, r8                @ C = sin(alpha) / yMag
         asr r6, #14
         
         @ store them
         strh r4, [r1], r3
-        rsb r5, #0            @ This needs to be negative (wrong in GBATek)
         strh r5, [r1], r3
         strh r6, [r1], r3
         strh r7, [r1], r3
