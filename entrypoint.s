@@ -143,9 +143,9 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_Diff8bitUnfilterWrite8bit
+    .word swi_Diff8bitUnfilterWrite16bit
+    .word swi_Diff16bitUnfilter
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
