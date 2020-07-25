@@ -156,7 +156,7 @@ swi_BGAffineSet:
         lsr r6, #8            @       post index by 4 because we want to stay word aligned for the next loop
         
         lsl r7, r6, #1
-        add r8, r6, #0x40     @ cos(phi) = sin(phi + pi/2), 0x80 because r8 was already shifted
+        add r8, r6, #0x40     @ cos(phi) = sin(phi + pi/2)
         and r8, #0xff         @ mod 2pi
         lsl r8, #1
         

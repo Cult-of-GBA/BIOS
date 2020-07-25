@@ -20,6 +20,7 @@ swi_HardReset:
     
     @ set r2 to 0 so that we enter ROM after SoftReset
     @ todo: jump to the boot animation function, and keep "reset_modes" in lr, then mov r2, #0 right before bx lr at the end of it
+    @ todo: RegisterRamReset before boot animation (happens in original as well)
     mov lr, #ROM_ENTRYPOINT
     b reset_modes
     
@@ -136,7 +137,7 @@ swi_table:
     .word swi_GetBiosChecksum
     .word swi_BGAffineSet
     .word swi_ObjAffineSet
-    .word swi_DoNothing
+    .word swi_BitUnpack
     .word swi_LZ77UnCompReadNormalWrite8bit
     .word swi_LZ77UnCompReadNormalWrite8bit
     .word swi_DoNothing
@@ -326,3 +327,4 @@ swi_LZ77UnCompReadNormalWrite8bit:
 .include "misc.s"
 .include "rotation_scaling.s"
 .include "reset_functions.s"
+.include "decompression.s"
