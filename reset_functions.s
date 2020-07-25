@@ -11,7 +11,7 @@
     @ note for iWRAM: last 200 bytes not cleared! (stack)
     @ note for IO Sound: we do not clear FIFO_A/B this way, but those will run out anyway, writing 0 to those is not really necessary...
     .hword 0xffff, 0x1F80, 0x0100, 0x6000
-    .hword 0x0100, 0x0020, 0x0010
+    .hword 0x0100, 0x0010, 0x0010
 
 .align 4
 .arm
@@ -61,7 +61,24 @@ swi_RegisterRamReset:
         @ carry is already checked because we checked it before
         bcc .register_ram_reset_return
         
-        @ todo: clear other registers
+        @ we want to clear 0x0-0x60 (LCD + unused)/0xb0-0x110(DMA/Timers)/0x200-0x20c(Interrupts + unused)
+        mov r1, #0x04000000             @ dest address
+        mov r2, #0x01000000             @ fixed source
+        add r2, #0x18                   @ length
+        bl swi_CpuFastSet
+        
+        @ in the swi_CpuFastSet, r1 ends up being the first address not written to
+        @ r2 is unchanged
+        add r1, #0x50                   @ = 0x040000b0
+        bl swi_CpuFastSet
+        
+        add r1, #0xf0                   @ = 0x04000200
+        mov r0, #0
+        str r0, [r1], #4                @ write to IE/IF
+        str r0, [r1], #4                @ write to WAITCNT/unused
+        str r0, [r1]                    @ write to IME
+        
+        @ POSTFLG and HALTCNT are not written to (would otherwise freeze up the GBA)
         
     .register_ram_reset_return:    
         ldmfd sp!, { r1-r4, r11, r12, lr }
