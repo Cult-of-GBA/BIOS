@@ -108,6 +108,7 @@ swi_ObjAffineSet:
         
         @ store them
         strh r4, [r1], r3
+        rsb r5, #0            @ This needs to be negative (wrong in GBATek)
         strh r5, [r1], r3
         strh r6, [r1], r3
         strh r7, [r1], r3
@@ -196,7 +197,7 @@ swi_BGAffineSet:
         mla r10, r8, r6, r10  @ O_y - D_x * C - D_y * D
         
         strh r3, [r1], #2
-        @ original BIOS seems to want a - sign for PB again (same as for ObjAffineSet, I don't know why)
+        @ B needs to be negative (wrong in GBATek)
         rsb r4, #0
         strh r4, [r1], #2
         strh r5, [r1], #2
