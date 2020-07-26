@@ -140,7 +140,7 @@ swi_table:
     .word swi_BitUnpack
     .word swi_LZ77UnCompReadNormalWrite8bit
     .word swi_LZ77UnCompReadNormalWrite8bit
-    .word swi_DoNothing
+    .word swi_HuffUnCompReadNormal
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_Diff8bitUnfilterWrite8bit
