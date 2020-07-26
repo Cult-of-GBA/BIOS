@@ -177,3 +177,9 @@ swi_DoNothing:
 .include "reset_functions.s"
 .include "decompression.s"
 .include "power.s"
+
+.pool
+
+@ This probably isn't best practice... whatever.
+.org 16384
+padding:
