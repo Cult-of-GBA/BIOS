@@ -16,29 +16,29 @@ swi_LZ77UnCompWrite8bit:
     ldr r2, [r0], #4
     lsrs r2, r2, #8
     @ ignore zero-length decompression requests
-    beq .lz77_done
+    beq .lz77_8bit_done
 
-.lz77_loop:
+.lz77_8bit_loop:
     @ read encoder byte, shift to MSB for easier access.
     ldrb r3, [r0], #1
     orr r3, #0x01000000
-.lz77_encoder_loop:
+.lz77_8bit_encoder_loop:
     tst r3, #0x80
-    bne .lz77_copy_window
-.lz77_copy_byte:
+    bne .lz77_8bit_copy_window
+.lz77_8bit_copy_byte:
     @ copy byte from current source to current destination
     ldrb r4, [r0], #1
     strb r4, [r1], #1
 
     @ check if decompressed length has been reached.
     subs r2, #1
-    beq .lz77_done
+    beq .lz77_8bit_done
 
     @ read next encoder or process next block
     lsls r3, #1
-    bcc .lz77_encoder_loop
-    b .lz77_loop
-.lz77_copy_window:
+    bcc .lz77_8bit_encoder_loop
+    b .lz77_8bit_loop
+.lz77_8bit_copy_window:
     @ read window tuple {displacement, size}
     ldrb r4, [r0], #1
     ldrb r5, [r0], #1
@@ -51,25 +51,25 @@ swi_LZ77UnCompWrite8bit:
     @ r4 = window size
     lsr r4, #4
     add r4, #3
-.lz77_copy_window_loop:
+.lz77_8bit_copy_window_loop:
     @ copy byte from window to current destination
     ldrb r6, [r1, -r5]
     strb r6, [r1], #1
 
     @ check if decompressed length has been reached
     subs r2, #1
-    beq .lz77_done
+    beq .lz77_8bit_done
 
     @ check if window has been fully copied
     subs r4, #1
-    bne .lz77_copy_window_loop
+    bne .lz77_8bit_copy_window_loop
 
     @ read next encoder or process next block
     lsls r3, #1
-    bcc .lz77_encoder_loop
-    b .lz77_loop
+    bcc .lz77_8bit_encoder_loop
+    b .lz77_8bit_loop
 
-.lz77_done:
+.lz77_8bit_done:
     ldmfd sp!, {r3 - r6}
     bx lr
 
