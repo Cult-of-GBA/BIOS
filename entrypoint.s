@@ -123,10 +123,10 @@ exception_unused:
 swi_table:
     .word swi_SoftReset
     .word swi_RegisterRamReset
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_Halt
+    .word swi_Stop
+    .word swi_IntrWait
+    .word swi_VBlankIntrWait
     .word swi_Div
     .word swi_DivArm
     .word swi_Sqrt
@@ -328,3 +328,4 @@ swi_LZ77UnCompReadNormalWrite8bit:
 .include "rotation_scaling.s"
 .include "reset_functions.s"
 .include "decompression.s"
+.include "power.s"
