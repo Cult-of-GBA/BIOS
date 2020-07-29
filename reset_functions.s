@@ -33,7 +33,7 @@ swi_RegisterRamReset:
     stmfd sp!, { r1-r4, r11, r12, lr }
     
     mov r3, r0          @ we need r0 for the CpuFastSet base address
-    mov r4, #0          @ used for offset into LUTs, start at -2 so we can increment at the start of the loop
+    mov r4, #0          @ used for offset into LUTs
     @ source address for CpuFastSet
     ldr r0, =#.register_ram_reset_zero_value
     ldr r11, =#.register_ram_reset_dest_LUT - 4     @ extra offset for convenience with r4

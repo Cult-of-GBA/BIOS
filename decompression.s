@@ -131,6 +131,7 @@ swi_BitUnpack:
     mov r7, #0              @ data_buffer
     mov r9, #0              @ dest_bit_count
     
+    
     @ while (src_len-- > 0)
     .bit_unpack_byte_loop:
         subs r3, #1
@@ -422,6 +423,8 @@ swi_RLUnCompReadNormalWrite8bit:
     
     @ check for invalid decompression parameters
     check_invalid_decomp r2, r3, r0, .rl_uncomp_read_normal_write_8bit_return
+    
+    .rl_uncomp_read_normal_write_8bit_check_skip:       @ used in boot_screen
     
     .rl_uncomp_read_normal_write_8bit_loop:
         ldrb r3, [r0], #1
