@@ -39,12 +39,20 @@ names_data:
 names_data_end:
 
 .align 4
-name_data_unpack_info:
-    .hword (names_data_end - names_data)
+flero_data_unpack_info:
+    .hword (names_data_end - names_data) * 2 / 5        @ top 2 lines 
     .byte 0x01
     .byte 0x04
-    .word 0x80000001    @ all data by 1 to use third palette entry for names, and the white palette entry for the background
-    
+    .word 0x80000001    @ increase all data by 1 to use third palette entry for "Fleroviux", and the white palette entry for the background
+
+.align 4
+densinh_data_unpack_info:
+    .hword (names_data_end - names_data) * 3 / 5        @ bottom 3 lines
+    .byte 0x01
+    .byte 0x04
+    .word 0x80000003    @ increase all data by 3 to use third palette entry for "DenSinH", and the white palette entry for the background
+   
+
 .align 4
 boot_screen_text_data:
     @ length of boot screen text
@@ -53,9 +61,6 @@ boot_screen_text_data:
     .byte 32
     @ actual text:
     .ascii "CULT-GBA"
-
-@ todo: shine sprite (put in top 8 tiles of last character,
-@             with different palette base, fill rest of first palette bank with white (backdrop) color)
 
 .align 4
 .arm
@@ -79,10 +84,12 @@ BootScreen:
     ldrh r1, =((31 << 10) | (1 << 5) | 3)
     strh r1, [r0]           @ backdrop
     ldrh r1, =#0x7fff
-    strh r1, [r0, #2]       @ second PAL entry (white BG on BG0)
+    strh r1, [r0, #2]       @ PAL entry 1 (white BG on "Fleroviux")
+    strh r1, [r0, #6]       @ PAL entry 3 (white BG on "DenSinH")
     @ pink: BGR (218, 12, 208) /8 ~~ (27, 2, 26)
     ldrh r1, =#((27 << 10) | (2 << 5) | 26)
-    strh r1, [r0, #4]       @ third PAL entry (pink for names)
+    strh r1, [r0, #4]       @ PAL entry 2 ("Fleroviux")
+    strh r1, [r0, #8]       @ PAL entry 4 ("DenSinH")
     
     @ ------------------------------------------- init LCD registers ---------------------------------------------
     mov r0, #MMIO_BASE                                @ DISPCNT
@@ -128,13 +135,20 @@ BootScreen:
     @ r0 now contains the address for the second tile in charblock 1
     mov r1, r0              @ destination address
     ldr r0, =#names_data    @ source address
-    ldr r2, =#name_data_unpack_info
+    ldr r2, =#flero_data_unpack_info
+    mov r3, #1
     
-    @                     ------- Cheese to skip BitUnpack BIOS read check -------
-    stmfd sp!, { r2-r12 }
-    ldrh r3, [r2]
-    bl .bit_unpack_check_skip
-    @                     ------------------------ /Cheese -----------------------
+    .boot_screen_names_decompress_loop:
+        @ USE THE FACT THAT r0 and r1 point to right after the data, so we can keep looping this
+        @                     ------- Cheese to skip BitUnpack BIOS read check -------
+        stmfd sp!, { r2-r12 }
+        ldrh r3, [r2]
+        bl .bit_unpack_check_skip
+        @                     ------------------------ /Cheese -----------------------
+        subs r3, #1
+        ldreq r2, =#densinh_data_unpack_info
+        beq .boot_screen_names_decompress_loop
+        
 
     
     @ ----------------------------------------- calculate text width ----------------------------------------------
