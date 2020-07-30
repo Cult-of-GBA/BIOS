@@ -1,3 +1,6 @@
+.equ GLOW_SPRITE_BASE, OAM_START + 0x400 - 32
+.equ SPEED, 4
+
 .align 4
 .pool
     
@@ -20,11 +23,20 @@ glyph_metrics:
     .incbin "glyph_metrics.dat"
     
 .align 4
+glow_pal_data:
+    .incbin "glow_palette.dat"
+glow_pal_data_end:
+
+glow_sprite_data:
+    .incbin "glow.dat"
+glow_sprite_data_end:
+    
+.align 4
 boot_screen_text_data:
     @ length of boot screen text
     .byte 8
     @ y coordinate
-    .byte 60
+    .byte 48
     @ actual text:
     .ascii "CULT-GBA"
 
@@ -47,16 +59,55 @@ BootScreen:
     bl .rl_uncomp_read_normal_write_8bit_check_skip
     @ ------------------------------------------------ /Cheese ---------------------------------------------------
     
-    @ load white backdrop
+    @ -------------------------------------- load base palette entries--------------------------------------------
     mov r0, #PAL_START
+    @ blue: BGR (254, 5, 21) /8 ~~ (32, 1, 3)
+    ldrh r1, =#0x7c23
+    strh r1, [r0]           @ backdrop
     ldrh r1, =#0x7fff
-    strh r1, [r0]
-    ldrh r1, =#0x7c00
+    strh r1, [r0, #2]       @ second PAL entry (white BG on BG0)
     
-    mov r0, #MMIO_BASE      @ DISPCNT
-    mov r1, #0x1140         @ 1D OBJ mapping; Enable BG0; Enable OBJ
-    strh r1, [r0]
+    @ ------------------------------------------- init LCD registers ---------------------------------------------
+    mov r0, #MMIO_BASE                                @ DISPCNT
+    ldrh r1, =#0x9140                                 @ 1D OBJ mapping; Enable BG0; Enable OBJ; OBJ Window display
+    strh r1, [r0]                                     @ store to DISPCNT
+    mov r1, #0x08                                     @ V-Blank IRQ enable, for swi_Halt
+    strh r1, [r0, #(REG_DISPSTAT - MMIO_BASE)]        @ store to DISPSTAT
+    ldrh r1, =#0x3001                                 @ display BG0 outside WinOBJ, display OBJ within WinOBJ
+    strh r1, [r0, #(REG_WINOUT - MMIO_BASE)]
     
+    mov r1, #0x07                                     @ Prio 3; CharBaseBlock 1; 4bpp
+    strh r1, [r0, #(REG_BG0CNT - MMIO_BASE)]          @ store to BG0CNT
+    
+    @ --------------------------------------- load glow sprite data -----------------------------------------------
+    @ assume palette data length is a multiple of 4
+    ldr r0, =#glow_pal_data
+    ldr r1, =#PAL_START + 0x220
+    mov r2, #(glow_pal_data_end - glow_pal_data) / 4
+    .boot_screen_glow_pal_transfer:
+        ldr r3, [r0], #4
+        str r3, [r1], #4
+        subs r2, #1
+        bgt .boot_screen_glow_pal_transfer
+    
+    ldr r1, =#VRAM_START + 0x18000 - (glow_sprite_data_end - glow_sprite_data)
+    mov r2, #(glow_sprite_data_end - glow_sprite_data) / 4
+    .boot_screen_glow_sprite_transfer:
+        ldr r3, [r0], #4
+        str r3, [r1], #4
+        subs r2, #1
+        bgt .boot_screen_glow_sprite_transfer
+    
+    @ --------------------------------------- load white tile for BG0 ---------------------------------------------
+    ldr r0, =#VRAM_START + CHAR_BLOCK_LENGTH
+    ldr r1, =#0x11111111    @ 8 pixels holding first palette entry
+    mov r2, #8
+    .boot_screen_tile_fill:
+        str r1, [r0], #4
+        subs r2, #1
+        bgt .boot_screen_tile_fill
+    
+    @ ----------------------------------------- calculate text width ----------------------------------------------
     ldr r12, =#glyph_metrics
     ldr r11, =#boot_screen_text_data
     mov r10, #' ' << 1      @ offset with first character * 2
@@ -79,7 +130,12 @@ BootScreen:
         
     lsr r0, #1                  @ width / 2
     rsb r0, #SCREEN_WIDTH  / 2  @ (screen_width - width) / 2
+    b BootScreen_draw           @ we need more pools...
     
+.pool
+
+BootScreen_draw:
+    @ -------------------------------------------- draw text centered ---------------------------------------------
     @ r12 still contains glyph_metrics
     @ r11 still contains boot_screen_text_data + 2 (text pointer)
     @ r10 still holds ' ' << 1 (offset to first character * 2)
@@ -101,12 +157,68 @@ BootScreen:
         cmp r3, r4
         blt .blit_screen_text
         
-    @ freeze:
-    @     b freeze
+    @ ------------------------------------------ initialize glow sprite--------------------------------------------
+    @ r11 still contains boot_screen_text_data + 2 (text pointer)
+    @ r1 still contains text y coordinate
+    
+    ldr r3, =#GLOW_SPRITE_BASE              @ load address of 4-th last OAM entry (8 bytes per object, 4 objects back)
+    mov r4, #0                              @ flip data/corner counter (tl, tr, bl, br)
+    mov r5, #1020                           @ base tile ID
+    mov r6, #0x4000                         @ 16x16 tile size
+    .boot_screen_glow_oam_init:
+        mov r2, r1
+        tst r4, #2
+        addne r2, #16
+        strh r2, [r3], #2                   @ y coordinate, other flags are all 0; todo: alpha blending
+        orr r0, r6, r4, lsl #12             @ x = 0, flipping data is in r4; tile size 32x32
+        tst r4, #1
+        addne r0, #16                       @ add offset for rightmost sprites for odd tile counts
+        
+        strh r0, [r3], #2
+        ldrh r0, =#0x1400 | 1020            @ palette bank 1, priority 1, TID 1020
+        strh r0, [r3], #4                   @ skip OBJ_ATTR3
+        add r4, #1
+        cmp r4, #4
+        blt .boot_screen_glow_oam_init
+        
+    b BootScreen_animate
 
+.pool
+
+BootScreen_animate:
+    @ I have to use registers that are not altered by swi_Halt for this:
+    mov r8, #SCREEN_WIDTH       @ keep track of x-coordinate
+    ldr r10, =#REG_IE
+    mov r11, #1
+    strh r11, [r10], #2         @ enable VBlank IRQs in IE (IME is still off); r11 now holds REG_IF
+
+    .boot_screen_animation_loop:
+        bl swi_Halt             @ wait until VBlank (IE still has VBlank IRQ enabled, IME is off)
+        strh r11, [r10]         @ acknowledge VBlank IRQ
+        
+        ldr r3, =#GLOW_SPRITE_BASE + 2   @ load address of first glow sprite + 2 (OBJ_ATTR1)
+        mov r4, #4
+        
+        .boot_screen_animation_glow_loop:
+            @ load all glow sprites, increment their x coordinate, and store them again
+            
+            ldrh r1, [r3]
+            add r1, #SPEED
+            strh r1, [r3], #8   @ go to next sprite
+            subs r4, #1
+            bgt .boot_screen_animation_glow_loop
+            
+        subs r8, #SPEED
+        bgt .boot_screen_animation_loop
+    
+    freeze:
+        b freeze
+    
     ldmfd sp!, { lr }
     bx lr
-    
+
+.pool
+
 draw_GB_letter:
     @ draw GameBoy font character r2 OBJ at (x, y) = (r0, r1), after character is transferred into OBJ with "number" r3
     stmfd sp!, { r0-r3, lr }
@@ -129,7 +241,8 @@ draw_GB_letter:
     add r2, r3, lsl #3          @ 8 bytes per object, this is object number r3
     
     @ OBJ_ATTR0
-    strh r1, [r2], #2           @ square; 4bpp; GFXMode normal; (all 0)
+    orr r1, #0x0800
+    strh r1, [r2], #2           @ square; 4bpp; GFXMode: OBJ window;
     
     @ OBJ_ATTR1
     orr r0, #0x8000             @ 32x32 size
