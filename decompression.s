@@ -120,6 +120,8 @@ swi_BitUnpack:
     @ check for invalid decompression parameters
     check_invalid_decomp r3, r4, r0, .bit_unpack_return
     
+    .bit_unpack_check_skip:
+    
     ldrb r4, [r2, #2]       @ src_width
     ldrb r5, [r2, #3]       @ dest_width
     ldr r2, [r2, #4]        @ data_offset and zero flag (we no longer need r2 after this)
@@ -130,7 +132,6 @@ swi_BitUnpack:
     rsb r12, r12, lsl r4    @ base bit mask for source data ((1 << src_width) - 1)
     mov r7, #0              @ data_buffer
     mov r9, #0              @ dest_bit_count
-    
     
     @ while (src_len-- > 0)
     .bit_unpack_byte_loop:

@@ -1,3 +1,5 @@
+.equ NAME_TILES_START, VRAM_START + (14 << 6) + (7 << 1)       @ Tx = 7, Ty = 14
+.equ ONE_LINE_TID_OFFSET, 30 << 1
 .equ GLOW_SPRITE_BASE, OAM_START + 0x400 - 32
 .equ SPEED, 4
 
@@ -30,13 +32,25 @@ glow_pal_data_end:
 glow_sprite_data:
     .incbin "glow.dat"
 glow_sprite_data_end:
+
+.align 4
+names_data:
+    .incbin "names.dat"
+names_data_end:
+
+.align 4
+name_data_unpack_info:
+    .hword (names_data_end - names_data)
+    .byte 0x01
+    .byte 0x04
+    .word 0x80000001    @ all data by 1 to use third palette entry for names, and the white palette entry for the background
     
 .align 4
 boot_screen_text_data:
     @ length of boot screen text
     .byte 8
     @ y coordinate
-    .byte 48
+    .byte 32
     @ actual text:
     .ascii "CULT-GBA"
 
@@ -52,20 +66,23 @@ BootScreen:
     ldr r0, =#glyphs
     mov r1, #eWRAM_START
     
-    @ ------------------------------ Cheese to skip RLDecompress BIOS read check ---------------------------------
+    @                       -------- Cheese to skip RLDecompress BIOS read check --------
     stmfd sp!, { r2-r4 }
     ldr r2, [r0], #4
     lsr r2, #8                  @ decomp_len
     bl .rl_uncomp_read_normal_write_8bit_check_skip
-    @ ------------------------------------------------ /Cheese ---------------------------------------------------
+    @                       ------------------------- /Cheese ---------------------------
     
     @ -------------------------------------- load base palette entries--------------------------------------------
     mov r0, #PAL_START
     @ blue: BGR (254, 5, 21) /8 ~~ (32, 1, 3)
-    ldrh r1, =#0x7c23
+    ldrh r1, =((31 << 10) | (1 << 5) | 3)
     strh r1, [r0]           @ backdrop
     ldrh r1, =#0x7fff
     strh r1, [r0, #2]       @ second PAL entry (white BG on BG0)
+    @ pink: BGR (218, 12, 208) /8 ~~ (27, 2, 26)
+    ldrh r1, =#((27 << 10) | (2 << 5) | 26)
+    strh r1, [r0, #4]       @ third PAL entry (pink for names)
     
     @ ------------------------------------------- init LCD registers ---------------------------------------------
     mov r0, #MMIO_BASE                                @ DISPCNT
@@ -98,7 +115,8 @@ BootScreen:
         subs r2, #1
         bgt .boot_screen_glow_sprite_transfer
     
-    @ --------------------------------------- load white tile for BG0 ---------------------------------------------
+    @ ----------------------------------------- load tiles for BG0 ------------------------------------------------
+    @ white tile:
     ldr r0, =#VRAM_START + CHAR_BLOCK_LENGTH
     ldr r1, =#0x11111111    @ 8 pixels holding first palette entry
     mov r2, #8
@@ -106,6 +124,18 @@ BootScreen:
         str r1, [r0], #4
         subs r2, #1
         bgt .boot_screen_tile_fill
+        
+    @ r0 now contains the address for the second tile in charblock 1
+    mov r1, r0              @ destination address
+    ldr r0, =#names_data    @ source address
+    ldr r2, =#name_data_unpack_info
+    
+    @                     ------- Cheese to skip BitUnpack BIOS read check -------
+    stmfd sp!, { r2-r12 }
+    ldrh r3, [r2]
+    bl .bit_unpack_check_skip
+    @                     ------------------------ /Cheese -----------------------
+
     
     @ ----------------------------------------- calculate text width ----------------------------------------------
     ldr r12, =#glyph_metrics
@@ -180,7 +210,27 @@ BootScreen_draw:
         add r4, #1
         cmp r4, #4
         blt .boot_screen_glow_oam_init
+    
+    @ ------------------------------------------------ draw names -------------------------------------------------
+    @ names.bmp is 128px (16 tiles) wide, and 40px (5 tiles) high
+    @ tile ID for the top left tile is 1, and keeps incrementing
+    @ max tile ID is then 1 + 10 * 4 = 41
+    ldr r0, =#NAME_TILES_START
+    mov r1, #1
+    mov r3, #5                              @ y counter
+    
+    .boot_screen_names_y_loop:
+        mov r2, #16                         @ x counter
+        .boot_screen_names_x_loop:
+            strh r1, [r0], #2
+            add r1, #1
+            subs r2, #1
+            bgt .boot_screen_names_x_loop
+        add r0, #ONE_LINE_TID_OFFSET - (14 << 1) @ go to the left side of the next line
+        subs r3, #1
+        bgt .boot_screen_names_y_loop
         
+    
     b BootScreen_animate
 
 .pool
@@ -210,9 +260,6 @@ BootScreen_animate:
             
         subs r8, #SPEED
         bgt .boot_screen_animation_loop
-    
-    freeze:
-        b freeze
     
     ldmfd sp!, { lr }
     bx lr

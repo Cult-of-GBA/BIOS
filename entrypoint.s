@@ -18,19 +18,15 @@ swi_HardReset:
     mov r0, #0x04000000
     strb r0, [r0, #8]
     
-    @ set r2 to 0 so that we enter ROM after SoftReset
-    @ todo: jump to the boot animation function, and keep "reset_modes" in lr, then mov r2, #0 right before bx lr at the end of it
-    @ todo: RegisterRamReset before boot animation (happens in original as well)
-    mov r0, #0x04000000
     bl reset_modes
-    
     mov r0, #0xff
     bl swi_RegisterRamReset
     
     bl BootScreen
     
-    @ mov r0, #0xff
-    @ bl swi_RegisterRamReset
+    bl reset_modes
+    mov r0, #0xff
+    bl swi_RegisterRamReset
     
     mov lr, #ROM_ENTRYPOINT
     bx lr
