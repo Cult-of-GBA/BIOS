@@ -146,7 +146,7 @@ swi_table:
     .word swi_ObjAffineSet
     .word swi_BitUnpack
     .word swi_LZ77UnCompWrite8bit
-    .word swi_LZ77UnCompWrite8bit
+    .word swi_LZ77UnCompWrite16bit
     .word swi_HuffUnCompReadNormal
     .word swi_RLUnCompReadNormalWrite8bit
     .word swi_RLUnCompReadNormalWrite16bit
