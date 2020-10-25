@@ -1,6 +1,6 @@
 # gba-bios
 
-A Game Boy Advance replacement BIOS. Written completely in ARM assembly from the scratch.
+A Game Boy Advance replacement BIOS. Written completely in ARM assembly from scratch.
 
 ![Boot Screen](screenshot.png)
 
