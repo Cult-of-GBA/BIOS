@@ -77,9 +77,6 @@ swi_LZ77UnCompWrite8bit:
 swi_LZ77UnCompWrite16bit:
     stmfd sp!, {r3 - r7}
 
-    @ TODO: this might not be necessary.
-    @ mov r7, #0
-
     @ Read header word:
     @ bit0-3:  reserved
     @ bit4-7:  compressed type (1 for LZ77)
