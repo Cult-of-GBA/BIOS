@@ -7,7 +7,7 @@
 .pool
     
 glyphs:
-    .incbin "glyphs.dat"
+    .incbin "boot_screen/glyphs.dat"
 
 .align 4
 glyph_bit_unpack_info:
@@ -22,20 +22,20 @@ glyph_metrics:
     @ contains data for glyph metrics in the following format:
     @ byte: width
     @ signed byte: lsb (Left Side Bbox offset)
-    .incbin "glyph_metrics.dat"
+    .incbin "boot_screen/glyph_metrics.dat"
     
 .align 4
 glow_pal_data:
-    .incbin "glow_palette.dat"
+    .incbin "boot_screen/glow_palette.dat"
 glow_pal_data_end:
 
 glow_sprite_data:
-    .incbin "glow.dat"
+    .incbin "boot_screen/glow.dat"
 glow_sprite_data_end:
 
 .align 4
 names_data:
-    .incbin "names.dat"
+    .incbin "boot_screen/names.dat"
 names_data_end:
 
 .align 4
