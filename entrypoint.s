@@ -174,17 +174,24 @@ swi_table:
     .word swi_DoNothing
 
 @ NOTE: SWI handler may modify r0-r2, r12 and lr.
+
 swi_DoNothing:
     bx lr
 
-.include "memory.s"
-.include "arithmetic.s"
-.include "misc.s"
-.include "rotation_scaling.s"
-.include "reset_functions.s"
-.include "decompression.s"
-.include "power.s"
-.include "boot_screen.s"
+swi_GetBiosChecksum:
+    @ GBATek says this should be the value resulting in r0 for a proper ROM's checksum
+    @ In the end, this BIOS is directed more towards emulators, and it wouldn't matter much 
+    @ if "not properly checksummed" ROMs can't run with it
+    ldr r0, =#0xBAAE187F
+    bx lr
+
+.include "bios_calls/cpu_set.s"
+.include "bios_calls/decompression.s"
+.include "bios_calls/math.s"
+.include "bios_calls/power.s"
+.include "bios_calls/register_ram_reset.s"
+
+.include "boot_screen/boot_screen.s"
 
 .pool
 

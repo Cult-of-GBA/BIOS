@@ -1,5 +1,4 @@
-
-@ TODO: check for invalid addresses < 0x02000000!
+@ TODO: check if source address is valid (>= 0x02000000)
 
 swi_CpuSet:
     stmfd sp!, {r3, r4}
