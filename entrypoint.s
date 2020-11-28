@@ -159,7 +159,7 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_MidiKey2Freq
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_DoNothing
@@ -190,6 +190,7 @@ swi_GetBiosChecksum:
 .include "bios_calls/math.s"
 .include "bios_calls/power.s"
 .include "bios_calls/register_ram_reset.s"
+.include "bios_calls/audio.s"
 
 .include "boot_screen/boot_screen.s"
 
