@@ -10,6 +10,12 @@ swi_Stop:
     strb r0, [r12, #(REG_HALTCNT - MMIO_BASE)]
     bx lr
 
+swi_CustomHalt:
+    @ abuse the fact that r12 is overwritten in the SWI return later
+    mov r12, #0x04000000
+    strb r2, [r12, #0x301]
+    bx lr
+
 swi_VBlankIntrWait:
     mov r0, #1
     mov r1, #1

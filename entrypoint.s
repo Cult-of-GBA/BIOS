@@ -168,10 +168,10 @@ swi_table:
     .word swi_DoNothing
     .word swi_DoNothing
     .word swi_HardReset
+    .word swi_CustomHalt
     .word swi_DoNothing
     .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_SoundGetJumpList
 
 @ NOTE: SWI handler may modify r0-r2, r12 and lr.
 

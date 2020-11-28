@@ -111,4 +111,16 @@ swi_MidiKey2Freq:
     mov r1, #0xb2        @ mk = 0xb2
     b .midi_load_max_return
 
+@ input: r0: destination address for function table
+swi_SoundGetJumpList:
+    @ Like Normmatt's replacement BIOS: stub by functions that return immediately
+    ldr r2, =#.swi_DoNothing
+    mov r3, #35  @ 36 entries, but check with ge (for (int i = 35; i >= 0; i--))
+    get_jump_list_loop:
+        str r2, [r0, r3]
+        subs r3, #1
+        bge get_jump_list_loop
+
+    bx lr
+
 .pool
