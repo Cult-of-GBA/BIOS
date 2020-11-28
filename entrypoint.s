@@ -24,6 +24,8 @@ swi_HardReset:
     
     bl BootScreen
     
+    @ r0 needs to contain 0x04000000 for the inline with swi_SoftReset to work
+    mov r0, #0x04000000
     bl reset_modes
     mov r0, #0xff
     bl swi_RegisterRamReset
