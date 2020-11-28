@@ -31,8 +31,8 @@ swi_ArcTan2:
     stmfd sp!, { r2, r4, r5, lr }
     
     @ copy r0, r1 into r2, r3
-    stmfd sp!, { r0, r1 }
-    ldmfd sp!, { r2, r3 }
+    mov r2, r0
+    mov r3, r1
     
     @ we calculate the offset into the offset LUT using r4
     @ I cannot shift the offset register in a ldrh instruction, so I need to calculate it with offset immediately
