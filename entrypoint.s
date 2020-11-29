@@ -159,7 +159,7 @@ swi_table:
     .word swi_DoNothing @ SoundDriverInit
     .word swi_DoNothing @ SoundDriverMode
     .word swi_DoNothing @ SoundDriverMain
-    .word swi_DoNothing @ SoundDriverVSync
+    .word swi_SoundDriverVSync
     .word swi_DoNothing @ SoundChannelClear
     .word swi_MidiKey2Freq
     .word swi_DoNothing @ SoundWhatever0

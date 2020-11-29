@@ -126,9 +126,9 @@ swi_SoundGetJumpList:
 swi_SoundDriverVSyncOn:
     @ very short SWI, basically just sets the audio DMA channel control registers
     mov r1, #0xb600
-    mov r0, #0x04000000
-    strh r1, [r0, #0xc6]    @ set DMA1CNT_H
-    strh r1, [r0, #0xd2]    @ set DMA2CNT_H
+    mov r0, #MMIO_BASE
+    strh r1, [r0, #REG_DMA1CNT_H - MMIO_BASE]    @ set DMA1CNT_H
+    strh r1, [r0, #REG_DMA2CNT_H - MMIO_BASE]    @ set DMA2CNT_H
     bx lr
 
 
@@ -160,10 +160,10 @@ swi_SoundDriverVSyncOff:
     add r1, #1
     str r1, [r4]
 
-    mov r1, #0x04000000
+    mov r1, #MMIO_BASE
 
-    strh r1, [r1, #0xc6]    @ disable DMA1
-    strh r1, [r1, #0xd2]    @ disable DMA2
+    strh r1, [r1, #REG_DMA1CNT_H - MMIO_BASE]    @ disable DMA1
+    strh r1, [r1, #REG_DMA2CNT_H - MMIO_BASE]    @ disable DMA2
     strb r1, [r4, #4]       @ set pcmDmaCounter to 0
 
     mov r0, #0
@@ -183,6 +183,47 @@ swi_SoundDriverVSyncOff:
 
     .sound_vsync_off_return:
     ldmfd sp!, { r4, lr }
+    bx lr
+
+swi_SoundDriverVSync:
+    @ acts on the same struct as above
+    @ loads the identifier, checks if it is correct
+    @     if it is, decrements pcmDmaCounter
+    @         if it remains positive, return, otherwise:
+    @
+    @     load "c15" field (byte, offs 0xb)
+    @     store it in pcmDmaCounter
+    @     disable DMA channels and set them to 0xb600 again
+
+    @ load address of flag
+    ldr r0, =#0x03007ff0    @ SoundInfo**
+    ldr r0, [r0]            @ SoundInfo*
+    ldr r1, [r0]            @ SoundInfo->ident
+    ldr r2, =#0x68736d53    @ SoundInfo identifier expected value
+
+    cmp r1, r2
+    bne .sound_vsync_return
+
+    ldrb r1, [r0, #0x4]     @ SoundInfo->pcmDmaCounter
+    subs r1, #1
+    strb r1, [r0, #0x4]     @ SoundInfo->pcmDmaCounter--
+
+    bgt .sound_vsync_return
+
+    ldrb r1, [r0, #0xb]     @ SoundInfo->c15
+    strb r1, [r0, #0x4]     @ SoundInfo->pcmDmaCounter = SoundInfo->c15
+
+    mov r0, #0
+    mov r1, #0xb600
+    mov r2, #MMIO_BASE
+
+    strh r0, [r2, #REG_DMA1CNT_H - MMIO_BASE]   @ disable DMA1
+    strh r0, [r2, #REG_DMA2CNT_H - MMIO_BASE]   @ disable DMA2
+    strh r1, [r2, #REG_DMA1CNT_H - MMIO_BASE]   @ enable DMA1
+    strh r1, [r2, #REG_DMA2CNT_H - MMIO_BASE]   @ enable DMA2
+
+    .sound_vsync_return:
+
     bx lr
 
 .pool
