@@ -123,6 +123,146 @@ swi_SoundGetJumpList:
 
     bx lr
 
+@ the sound driver has info in a stuct called SoundInfo, described here:
+@ https://github.com/pret/pokeemerald/blob/b4f83b4f0fcce8c06a6a5a5fd541fb76b1fe9f4c/include/gba/m4a_internal.h#L154
+@ a pointer to this struct should be at 03007ff0 in memory
+
+.sound_init_function_table:
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+    .word swi_DoNothing
+
+swi_SoundDriverInit:
+    @ input: r0: pointer to SoundInfo struct
+    @ disables DMA 1 and 2 (CNT_H = 0)
+    @ sets SOUNDCNT_X to 0x8f
+    @ sets SOUNDCNT_H to 0xa90e
+    @ r2 = read top byte & 3 from SOUNDBIAS (BIAS level)
+    @ set top byte to r2 | 0x40 (8bit / 65.536kHz sampling rate)
+    @ set DMA1SAD to &SoundInfo->pcmBuffer
+    @ set DMA1DAD to FIFO_A
+    @ set DMA2SAD to SoundInfo + 0x13 << 7
+    @ set DMA2DAD to FIFO_B
+    @ store pointer to SoundInfo at 0x03007ff0
+    @ zero out 0x3ec words at SoundInfo struct pointer
+    @ set SoundInfo->reverb (offs 6) to 8
+    @ set SoundInfo->maxChans (offs 7) to 0xf
+    @ set SoundInfo->plynote (offs 0x38) to 00002425
+    @ set callbacks to function that immediately returns
+    @     offs 0x28, 0x2c, 0x30, 0x3c
+    @ set jumptable MPlayJumpTable (offs 0x34) (35 entry jump table)
+    @ !!! call function FUN_0000170a(0x40000);
+    @ set SoundInfo->ident to Smsh: 6873'6d53
+    stmfd sp!, { r4, lr }
+
+    mov r4, r0
+    mov r1, #MMIO_BASE
+
+    @ disable DMA 1 and 2
+    strh r1, [r1, #REG_DMA1CNT_H - MMIO_BASE]
+    strh r1, [r1, #REG_DMA2CNT_H - MMIO_BASE]
+
+    @ set sound registers
+    mov r2, #0x8f
+    strh r2, [r1, #REG_SOUNDCNT_X - MMIO_BASE]
+
+    ldrh r2, =#0xa90e
+    strh r2, [r1, #REG_SOUNDCNT_H - MMIO_BASE]
+
+    @ set SOUNDBIAS
+    ldrb r2, [r1, #REG_SOUNDBIAS - MMIO_BASE + 1]
+    orr r2, #0x40
+    strb r2, [r1, #REG_SOUNDBIAS - MMIO_BASE + 1]
+
+    add r2, r0, #0x350  @ SoundInfo->pcmBuffer
+    str r2, [r1, #REG_DMA1SAD - MMIO_BASE]
+
+    add r2, r1, #REG_FIFO_A - MMIO_BASE
+    str r2, [r1, #REG_DMA1DAD - MMIO_BASE]
+
+    add r2, r0, #0x980  @ SoundInfo + (0x13 << 7) (second half of pcmBuffer)
+    str r2, [r1, #REG_DMA2SAD - MMIO_BASE]
+
+    add r2, r1, #REG_FIFO_B - MMIO_BASE
+    str r2, [r1, #REG_DMA2DAD - MMIO_BASE]
+
+    @ store pointer to SoundInfo
+    ldr r2, =#0x03007ff0
+    str r0, [r2]
+
+    mov r0, #0
+    stmfd sp!, { r0 }       @ push 0 onto the stack as source address for CpuSet (cant use address from BIOS)
+    sub r0, sp, #4          @ set source address
+
+    mov r1, r4              @ &SoundInfo
+    mov r2, #0x000003ec     @ 3ec words
+    orr r2, #0x01000000     @ fill with fixed source
+
+    bl swi_CpuSet           @ clear buffer
+    ldmfd sp!, { r0 }       @ pop zero value off the stack
+    
+    @ set values in SoundInfo struct
+    @ pointers to these values might not be aligned:
+    mov r0, #8
+    strb r0, [r4, #0x6]
+    mov r0, #0xf
+    strb r0, [r4, #0x7]
+
+    ldrh r0, =#0x2425
+    str r0, [r4, #0x38]
+
+    @ callbacks
+    ldr r0, =#swi_DoNothing
+    str r0, [r4, #0x28]
+    str r0, [r4, #0x2c]
+    str r0, [r4, #0x30]
+    str r0, [r4, #0x3c]
+
+    ldr r0, =#.sound_init_function_table
+    str r0, [r4, #0x34]
+
+    @ todo: figure out what FUN_0000170a(0x40000) does
+    @ set SoundInfo->ident to Smsh: 6873'6d53
+    ldr r0, =#0x68736d53
+    str r0, [r4]
+
+    ldmfd sp!, { r4, lr }
+    bx lr
+
+.pool
+
 swi_SoundDriverVSyncOn:
     @ very short SWI, basically just sets the audio DMA channel control registers
     mov r1, #0xb600
@@ -135,8 +275,7 @@ swi_SoundDriverVSyncOn:
 swi_SoundDriverVSyncOff:
     @ loads a flag from the location specified at 03007ff0
     @ if this flag is equal to 6873'6d53 or 6873'6d54, it stores increments it by one and stores it back,
-    @ this locks the SoundInfo struct described here:
-    @ https://github.com/pret/pokeemerald/blob/b4f83b4f0fcce8c06a6a5a5fd541fb76b1fe9f4c/include/gba/m4a_internal.h#L154
+    @ this locks the SoundInfo struct described earlier
     @ the ident should be Smsh or Tmsh (locked)
     @ it also sets the pcmDmaCounter field to 0
 
