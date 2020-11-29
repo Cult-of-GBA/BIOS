@@ -123,4 +123,66 @@ swi_SoundGetJumpList:
 
     bx lr
 
+swi_SoundDriverVSyncOn:
+    @ very short SWI, basically just sets the audio DMA channel control registers
+    mov r1, #0xb600
+    mov r0, #0x04000000
+    strh r1, [r0, #0xc6]    @ set DMA1CNT_H
+    strh r1, [r0, #0xd2]    @ set DMA2CNT_H
+    bx lr
+
+
+swi_SoundDriverVSyncOff:
+    @ loads a flag from the location specified at 03007ff0
+    @ if this flag is equal to 6873'6d53 or 6873'6d54, it stores increments it by one and stores it back,
+    @ this locks the SoundInfo struct described here:
+    @ https://github.com/pret/pokeemerald/blob/b4f83b4f0fcce8c06a6a5a5fd541fb76b1fe9f4c/include/gba/m4a_internal.h#L154
+    @ the ident should be Smsh or Tmsh (locked)
+    @ it also sets the pcmDmaCounter field to 0
+
+    @ it clears the audio DMA channel control regs (sets to 0)
+    @ sets some stuff up, does a DMA (without using DMA channels to clear the pcm buffer in that struct),
+    @ decrements and stores the flag again. Sets the byte at 03007ff4 to 0
+
+    stmfd sp!, { r4, lr }
+
+    @ load address of flag
+    ldr r4, =#0x03007ff0    @ SoundInfo**
+    ldr r4, [r4]            @ SoundInfo*
+    ldr r1, [r4]            @ SoundInfo->ident
+    ldr r0, =#0x68736d54    @ SoundInfo identifier expected value + 1
+
+    sub r0, r1
+    cmp r0, #1              @ check if ident is 0x68736d53 or 0x68736d54
+    bhi .sound_vsync_off_return
+
+    @ lock SoundInfo struct
+    add r1, #1
+    str r1, [r4]
+
+    mov r1, #0x04000000
+
+    strh r1, [r1, #0xc6]    @ disable DMA1
+    strh r1, [r1, #0xd2]    @ disable DMA2
+    strb r1, [r4, #4]       @ set pcmDmaCounter to 0
+
+    mov r0, #0
+    stmfd sp!, { r0 }       @ push 0 onto the stack as source address for CpuSet (cant use address from BIOS)
+    sub r0, sp, #4          @ set source address
+
+    add r1, r4, #0x350      @ &SoundInfo->pcmBuffer
+    mov r2, #0x00000318     @ 318 words
+    orr r2, #0x01000000     @ fill with fixed source
+
+    bl swi_CpuSet           @ clear buffer
+    ldmfd sp!, { r0 }       @ pop zero value off the stack
+    
+    ldr r1, [r4]            @ SoundInfo->ident
+    sub r1, #1
+    str r1, [r4]            @ decrement identifier again
+
+    .sound_vsync_off_return:
+    ldmfd sp!, { r4, lr }
+    bx lr
+
 .pool

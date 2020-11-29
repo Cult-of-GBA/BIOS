@@ -155,24 +155,23 @@ swi_table:
     .word swi_Diff8bitUnfilterWrite8bit
     .word swi_Diff8bitUnfilterWrite16bit
     .word swi_Diff16bitUnfilter
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_DoNothing @ SoundBias
+    .word swi_DoNothing @ SoundDriverInit
+    .word swi_DoNothing @ SoundDriverMode
+    .word swi_DoNothing @ SoundDriverMain
+    .word swi_DoNothing @ SoundDriverVSync
+    .word swi_DoNothing @ SoundChannelClear
     .word swi_MidiKey2Freq
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_DoNothing @ SoundWhatever0
+    .word swi_DoNothing @ SoundWhatever1
+    .word swi_DoNothing @ SoundWhatever2
+    .word swi_DoNothing @ SoundWhatever3
+    .word swi_DoNothing @ SoundWhatever4
+    .word swi_DoNothing @ MultiBoot
     .word swi_HardReset
     .word swi_CustomHalt
-    .word swi_DoNothing
-    .word swi_DoNothing
+    .word swi_SoundDriverVSyncOff
+    .word swi_SoundDriverVSyncOn
     .word swi_SoundGetJumpList
 
 @ NOTE: SWI handler may modify r0-r2, r12 and lr.
