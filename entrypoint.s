@@ -156,7 +156,7 @@ swi_table:
     .word swi_Diff8bitUnfilterWrite16bit
     .word swi_Diff16bitUnfilter
     .word swi_DoNothing @ SoundBias
-    .word swi_SoundDriverInit @ SoundDriverInit
+    .word swi_SoundDriverInit
     .word swi_DoNothing @ SoundDriverMode
     .word swi_DoNothing @ SoundDriverMain
     .word swi_SoundDriverVSync
