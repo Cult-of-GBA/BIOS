@@ -18,7 +18,7 @@ swi_HardReset:
     mov r0, #0x04000000
     strb r0, [r0, #8]
 
-	msr cpsr, #MODE_SYS
+    msr cpsr, #MODE_SYS
     
     bl reset_modes
     mov r0, #0xff
