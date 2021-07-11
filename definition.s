@@ -46,6 +46,9 @@
 .equ REG_FIFO_A,     0x040000a0
 .equ REG_FIFO_B,     0x040000a4
 
+.equ REG_RCNT,       0x04000134
+.equ REG_JOYCNT,     0x04000140
+
 .equ REG_IE,         0x04000200
 .equ REG_IME,        0x04000208
 .equ REG_HALTCNT,    0x04000301

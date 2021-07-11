@@ -26,15 +26,66 @@ swi_HardReset:
     
     bl BootScreen
     
+    mov r0, #0xff
+    bl swi_RegisterRamReset
     @ r0 needs to contain 0x04000000 for the inline with swi_SoftReset to work
     mov r0, #0x04000000
     bl reset_modes
-    mov r0, #0xff
-    bl swi_RegisterRamReset
+
+    @ setup IO registers in the same way the official BIOS does
+    @ testing on my emulators gave the following non-zero values:
+    @ 0000 - 0080
+    @ 0020 - 0100
+    @ 0026 - 0100
+    @ 0030 - 0100
+    @ 0036 - 0100
+    @ 0082 - 880e
+    @ 0088 - 0200
+    @ 0134 - 8000
+    @ out BIOS still comes out with 
+    @ 0004 - 0008
+    @ 0008 - 0007
+    @ 004a - 3001
+    @ 0200 - 0001
+
+    mov r0, #0x04000000
+    mov r1, #.hard_reset_IO_values
+
+    .hard_reset_IO_setup:
+        ldrh r2, [r1], #2
+        ldrh r3, [r1], #2
+        strh r3, [r0, r2]
+        cmp r1, #.hard_reset_IO_values_end
+        blt .hard_reset_IO_setup
     
+    @ clear registers that should be 0
+    strh r0, [r0, #(REG_DISPSTAT - MMIO_BASE)]
+    strh r0, [r0, #(REG_BG0CNT - MMIO_BASE)]
+    strh r0, [r0, #(REG_WINOUT - MMIO_BASE)]
+    add r1, r0, #(REG_IME - MMIO_BASE)
+    strh r0, [r1]
+    
+    msr cpsr_cf, #MODE_SYS
+    mov r0, #0
+    mov r1, #0
+    mov r2, #0
+    mov r3, #0
+        
     mov lr, #ROM_ENTRYPOINT
     bx lr
-    
+
+.hard_reset_IO_values:
+    @ address, value
+    .hword 0x0000, 0x0080
+    .hword 0x0020, 0x0100
+    .hword 0x0026, 0x0100
+    .hword 0x0030, 0x0100
+    .hword 0x0036, 0x0100
+    .hword 0x0082, 0x880e
+    .hword 0x0088, 0x0200
+    .hword 0x0134, 0x8000
+.hard_reset_IO_values_end:
+
 swi_SoftReset:
     @ read return address from 0x03007FFA (0x04000000 - 6 with mirroring)
     mov r0, #0x04000000
