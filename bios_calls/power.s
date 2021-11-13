@@ -1,13 +1,13 @@
 swi_Halt:
-    mov r0, #0
+    mov r11, #0
     mov r12, #MMIO_BASE
-    strb r0, [r12, #(REG_HALTCNT - MMIO_BASE)]
+    strb r11, [r12, #(REG_HALTCNT - MMIO_BASE)]
     bx lr
 
 swi_Stop:
-    mov r0, #0x80
+    mov r11, #0x80
     mov r12, #MMIO_BASE
-    strb r0, [r12, #(REG_HALTCNT - MMIO_BASE)]
+    strb r11, [r12, #(REG_HALTCNT - MMIO_BASE)]
     bx lr
 
 swi_CustomHalt:
