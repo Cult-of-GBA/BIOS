@@ -35,13 +35,13 @@ swi_RegisterRamReset:
     @ source address for CpuFastSet, preserved in non-incrementing modes
     ldr r0, =#.register_ram_reset_zero_value
     
-    tst r0, #0x80
+    tst r3, #0x80
     bne .register_ram_other_IO
     .register_ram_other_IO_return:
-    tst r0, #0x40
+    tst r3, #0x40
     bne .register_ram_sound_IO
     .register_ram_sound_IO_return:
-    tst r0, #0x20
+    tst r3, #0x20
     bne .register_ram_SIO
     .register_ram_SIO_return:
 
