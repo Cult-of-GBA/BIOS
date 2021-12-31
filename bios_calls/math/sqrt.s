@@ -1,7 +1,7 @@
 swi_Sqrt:
     @ idea: binary search with a power of 2 as initial guess
     
-    stmfd sp!, { r1, r2, r3 }
+    stmfd sp!, { r1, r2, r3, r4 }
     
     @ find power of 2 as initial guess
     mov r1, #1
@@ -17,9 +17,9 @@ swi_Sqrt:
     
     .sqrt_binary_search_loop:
         add r3, r1, r2
-        mul r3, r3, r3
-        cmp r3, r0
-        addle r1, r2
+        mul r4, r3, r3
+        cmp r4, r0
+        addls r1, r2
         
         @ break off early if we have already found the square (eq)
         lsrnes r2, #1
@@ -27,5 +27,5 @@ swi_Sqrt:
         
     mov r0, r1
     
-    ldmfd sp!, { r1, r2, r3 }
+    ldmfd sp!, { r1, r2, r3, r4 }
     bx lr
