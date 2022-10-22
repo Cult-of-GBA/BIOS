@@ -258,6 +258,7 @@ BootScreen_animate:
 
     .boot_screen_animation_loop:
         bl swi_Halt             @ wait until VBlank (IE still has VBlank IRQ enabled, IME is off)
+        mov r11, #1
         strh r11, [r10]         @ acknowledge VBlank IRQ
         
         ldr r3, =#GLOW_SPRITE_BASE + 2   @ load address of first glow sprite + 2 (OBJ_ATTR1)
