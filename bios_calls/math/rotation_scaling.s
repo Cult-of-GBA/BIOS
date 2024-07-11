@@ -80,11 +80,11 @@ swi_ObjAffineSet:
     @ calculations done
     .obj_affine_set_loop:
         subs r2, #1
-        bmi .obj_affine_set_return
+        blt .obj_affine_set_return
         
         ldrsh r4, [r0], #2    @ x scaling (8 bit fractional)
         ldrsh r6, [r0], #2    @ y scaling (8 bit fractional)
-        ldrh r7, [r0], #2     @ angle of rotation (8 bit fractional, ignored by original BIOS)
+        ldrh r7, [r0], #4     @ angle of rotation (8 bit fractional, ignored by original BIOS)
         lsr r7, #8
         
         lsl r8, r7, #1
@@ -143,7 +143,7 @@ swi_BGAffineSet:
     @ calculations done
     .bg_affine_set_loop:
         subs r2, #1
-        bmi .bg_affine_set_return
+        blt .bg_affine_set_return
         
         ldmia r0!, { r9, r10, r11 }
         @ r9:  Original data center x (O_x)
