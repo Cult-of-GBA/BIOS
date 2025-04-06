@@ -126,7 +126,7 @@ swi_RegisterRamReset:
         str r4, [r1]                    @ write to IME
 
         @ set scaling parameters A and D to 0x100
-        sub r1, #0x200
+        sub r1, #0x208                  @ = 0x04000000
         mov r4, #0x100
         strh r4, [r1, #0x20]
         strh r4, [r1, #0x26]
