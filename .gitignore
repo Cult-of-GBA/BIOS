@@ -1,2 +1,11 @@
 entrypoint.o
 bios.bin
+gba_bios.bin
+
+result
+
+# Files for testing
+*.gba
+*.sav
+testing/
+*.log

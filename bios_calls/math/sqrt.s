@@ -1,11 +1,14 @@
 swi_Sqrt:
     @ idea: binary search with a power of 2 as initial guess
-    
+
     stmfd sp!, { r1, r2, r3, r4 }
     
     @ find power of 2 as initial guess
+    movs r2, r0  @ copy r0 because we need it later
+    @ sqrt(0) == 0
+    beq .sqrt_return
+
     mov r1, #1
-    mov r2, r0                    @ copy r0 because we need it later
     .sqrt_initial_guess_loop:
         cmp r1, r2, lsr #2
         lslls r1, #1
@@ -27,5 +30,6 @@ swi_Sqrt:
         
     mov r0, r1
     
-    ldmfd sp!, { r1, r2, r3, r4 }
-    bx lr
+    .sqrt_return:
+        ldmfd sp!, { r1, r2, r3, r4 }
+        bx lr
