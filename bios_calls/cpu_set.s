@@ -9,16 +9,16 @@ swi_CpuSet:
     beq .swi_CpuSet_done
 
     @ r2 = fn table index, bit0=fill, bit1=32-bit
-    @ TODO: mask out unused bits to make sure this doesn't break?
-    lsrs r2, r2, #25
-    orrcs r2, r2, #1
+    and r2, r2, #0x05000000     @ keep only bit24 (fill) and bit26 (32-bit)
     adr r4, .fn_table
-    ldr pc, [r4, r2, lsl #2]
+    ldr pc, [r4, r2, lsr #22]   @ bit24 -> +4 bytes, bit26 -> +16 bytes
 .fn_table:
-    .word .copy16
-    .word .fill16
-    .word .copy32
-    .word .fill32
+    .word .copy16               @ +0   (neither bit)
+    .word .fill16               @ +4   (fill)
+    .word 0                     @ +8   unused
+    .word 0                     @ +12  unused
+    .word .copy32               @ +16  (32-bit)
+    .word .fill32               @ +20  (32-bit + fill)
 .copy16:
     ldrh r4, [r0], #2
     strh r4, [r1], #2
